@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>mecanum_mpc</name>
+  <version>0.1.0</version>
+  <description>Linear time-varying MPC path tracking (circle, ellipse, figure-8, square) for the own mecanum robot, on the exact Chaplygin dynamics of Zeidis &amp; Zimmermann (ZAMM 2019).</description>
+  <maintainer email="peter.varadi@egroup.hu">varad</maintainer>
+  <license>TODO: License declaration</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>tb3_sim_bringup</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <!-- OSQP Python bindings have no rosdep key on Noble: install them with pip (user site). -->
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

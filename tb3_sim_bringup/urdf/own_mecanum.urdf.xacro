@@ -1,0 +1,186 @@
+<?xml version="1.0"?>
+<!--
+  Own mecanum robot (github.com/Kemenylegeny/Mecanum-TDK, assets/robots/own_mecanum) for gz sim.
+
+  models/own_mecanum/robot.urdf + meshes/ are copied from that repo UNCHANGED, so a newer
+  version can be dropped in over them. Everything the simulation needs on top of it lives here:
+  base_footprint, lidar + IMU frames and sensors, roller friction, the MecanumDrive and
+  JointStatePublisher systems. The launch file rewrites the URDF's relative mesh paths
+  ("meshes/...") to package:// URIs.
+
+  The same description goes to Gazebo and to robot_state_publisher. Unlike the Waffle Pi
+  mecanum model there is no anisotropic-friction trick: every roller is its own free-spinning
+  link (approximated by 6 spheres), so plain isotropic friction gives mecanum behaviour.
+-->
+<robot name="own_mecanum" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find tb3_sim_bringup)/models/own_mecanum/robot.urdf"/>
+
+  <!-- Geometry from robot.urdf / wheel_geometry.json: wheels at x = +-0.064, y = +-0.1526,
+       z = -0.0415 in base_link; effective rolling radius of the roller envelope 0.03028. -->
+  <xacro:property name="wheel_radius" value="0.03028"/>
+  <xacro:property name="wheel_z" value="-0.0415"/>
+  <!-- rubber rollers: robot_config.json gives 0.5-1.1, take the middle -->
+  <xacro:property name="roller_mu" value="0.8"/>
+
+  <!-- base_footprint on the ground under the centre of the four wheels (= base_link origin
+       in x/y), so odometry tracks the point the robot rotates about. -->
+  <link name="base_footprint"/>
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${wheel_radius - wheel_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Lidar: the scanner is part of chassis_visual.stl (round head ~62 mm across, centred at
+       x = 0.0015, y = 0, spanning z = 0.048..0.0665 in base_link). Scan plane at mid-head. -->
+  <link name="base_scan"/>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="base_scan"/>
+    <origin xyz="0.0015 0 0.057" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU: placeholder at the chassis origin until the real mounting point is known. -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Roller friction, for all 4 x 9 rollers -->
+  <xacro:macro name="roller_friction" params="wheel i">
+    <gazebo reference="${wheel}_roller_0${i}">
+      <mu1>${roller_mu}</mu1>
+      <mu2>${roller_mu}</mu2>
+    </gazebo>
+    <xacro:if value="${i &lt; 8}">
+      <xacro:roller_friction wheel="${wheel}" i="${i + 1}"/>
+    </xacro:if>
+  </xacro:macro>
+  <xacro:roller_friction wheel="front_left" i="0"/>
+  <xacro:roller_friction wheel="front_right" i="0"/>
+  <xacro:roller_friction wheel="rear_left" i="0"/>
+  <xacro:roller_friction wheel="rear_right" i="0"/>
+
+  <!-- Sensors: same topics and settings as the TurtleBot3 Waffle Pi, so the upstream
+       turtlebot3_waffle_pi_bridge.yaml works unchanged. -->
+  <gazebo reference="base_scan">
+    <sensor name="lidar" type="gpu_lidar">
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <topic>scan</topic>
+      <gz_frame_id>base_scan</gz_frame_id>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1.000000</resolution>
+            <min_angle>0.000000</min_angle>
+            <max_angle>6.280000</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.120000</min>
+          <max>3.5</max>
+          <resolution>0.015000</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="imu_link">
+    <sensor name="imu" type="imu">
+      <always_on>true</always_on>
+      <update_rate>200</update_rate>
+      <topic>imu</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
+  <!-- drive:=velocity  MecanumDrive: /cmd_vel -> ideal wheel velocities, wheel odometry on /odom.
+       drive:=effort    no MecanumDrive. Each wheel joint takes a torque [N m] on
+                        /model/own_mecanum/joint/<corner>_wheel_joint/cmd_force (ApplyJointForce),
+                        and /odom + odom->base_footprint TF come from the TRUE model pose
+                        (OdometryPublisher), i.e. ideal state estimation. Used by mecanum_mpc. -->
+  <xacro:arg name="drive" default="velocity"/>
+
+  <xacro:if value="${'$(arg drive)' == 'effort'}">
+    <xacro:macro name="wheel_torque_input" params="wheel">
+      <gazebo>
+        <plugin filename="gz-sim-apply-joint-force-system" name="gz::sim::systems::ApplyJointForce">
+          <joint_name>${wheel}_wheel_joint</joint_name>
+        </plugin>
+      </gazebo>
+    </xacro:macro>
+    <xacro:wheel_torque_input wheel="front_left"/>
+    <xacro:wheel_torque_input wheel="front_right"/>
+    <xacro:wheel_torque_input wheel="rear_left"/>
+    <xacro:wheel_torque_input wheel="rear_right"/>
+    <gazebo>
+      <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+        <odom_frame>odom</odom_frame>
+        <robot_base_frame>base_footprint</robot_base_frame>
+        <odom_topic>odom</odom_topic>
+        <tf_topic>/tf</tf_topic>
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <dimensions>2</dimensions>
+      </plugin>
+    </gazebo>
+  </xacro:if>
+
+  <gazebo>
+    <xacro:if value="${'$(arg drive)' == 'velocity'}">
+    <!-- Inverse kinematics cmd_vel (vx, vy, wz) -> 4 wheel velocities, plus wheel odometry.
+         The rollers then produce the actual motion physically. -->
+    <plugin filename="gz-sim-mecanum-drive-system" name="gz::sim::systems::MecanumDrive">
+      <front_left_joint>front_left_wheel_joint</front_left_joint>
+      <front_right_joint>front_right_wheel_joint</front_right_joint>
+      <back_left_joint>rear_left_wheel_joint</back_left_joint>
+      <back_right_joint>rear_right_wheel_joint</back_right_joint>
+
+      <wheel_separation>0.3052</wheel_separation>
+      <wheelbase>0.128</wheelbase>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+
+      <min_acceleration>-1.0</min_acceleration>
+      <max_acceleration>1.0</max_acceleration>
+
+      <topic>cmd_vel</topic>
+
+      <odom_topic>odom</odom_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_footprint</child_frame_id>
+      <odom_publish_frequency>30</odom_publish_frequency>
+
+      <tf_topic>/tf</tf_topic>
+    </plugin>
+    </xacro:if>
+
+    <!-- No joint list = all joints (4 wheels + 36 rollers), so robot_state_publisher can
+         place every roller in TF/RViz. -->
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <topic>joint_states</topic>
+    </plugin>
+  </gazebo>
+
+</robot>
