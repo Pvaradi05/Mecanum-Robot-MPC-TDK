@@ -23,7 +23,42 @@ WHEELS = ('front_left', 'front_right', 'rear_left', 'rear_right')
 # drive for per-wheel torque inputs, see urdf/own_mecanum.urdf.xacro.
 
 
+def _other_gz_servers():
+    """gz sim servers already running in our GZ_PARTITION, as (pid, minutes running, cmdline).
+    A second server in the same partition makes `create` hang ("Requesting list of world names")
+    and the GUI stay black. Typical source: a launch that was killed (closed terminal), leaving an
+    orphaned server behind."""
+    mine = os.environ.get('GZ_PARTITION', '')
+    with open('/proc/uptime') as f:
+        uptime = float(f.read().split()[0])
+    found = []
+    for pid in filter(str.isdigit, os.listdir('/proc')):
+        try:
+            with open(f'/proc/{pid}/cmdline', 'rb') as f:
+                cmd = f.read().replace(b'\0', b' ').decode(errors='replace').strip()
+            if not cmd.startswith('gz sim') or ' -s' not in f' {cmd}':
+                continue
+            with open(f'/proc/{pid}/environ', 'rb') as f:
+                env = dict(e.split(b'=', 1) for e in f.read().split(b'\0') if b'=' in e)
+            if env.get(b'GZ_PARTITION', b'').decode() != mine:
+                continue
+            with open(f'/proc/{pid}/stat') as f:
+                start = int(f.read().rsplit(')', 1)[1].split()[19]) / os.sysconf('SC_CLK_TCK')
+            found.append((int(pid), (uptime - start) / 60, cmd))
+        except (OSError, ValueError, IndexError):
+            continue
+    return found
+
+
 def _gz_server(context, *args, **kwargs):
+    others = _other_gz_servers()
+    if others:
+        listing = '\n'.join(f'  pid {p}, running {m:.0f} min: {c}' for p, m, c in others)
+        raise RuntimeError(
+            'Another Gazebo server is already running in this GZ_PARTITION:\n' + listing +
+            '\nIt would collide with this simulation (the robot is not spawned, the GUI stays '
+            'black). Stop it first, e.g.\n  kill ' + ' '.join(str(p) for p, _, _ in others) +
+            '\nor run this launch in its own partition: GZ_PARTITION=<name> ros2 launch ...')
     world = LaunchConfiguration('world').perform(context)
     world_path = os.path.join(
         get_package_share_directory('turtlebot3_gazebo'), 'worlds', f'{world}.world')
