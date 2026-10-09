@@ -24,6 +24,7 @@ setup(
             'mpc_node = mecanum_mpc.mpc_node:main',
             'offline_sim = mecanum_mpc.offline_sim:main',
             'evaluate = mecanum_mpc.evaluate:main',
+            'dashboard = mecanum_mpc.dashboard:main',
         ],
     },
 )

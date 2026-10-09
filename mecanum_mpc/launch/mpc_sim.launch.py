@@ -8,6 +8,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -29,6 +30,8 @@ def generate_launch_description():
                               description='reference (LTV-MPC) | prediction (one SQP-RTI step)'),
         DeclareLaunchArgument('world', default_value='empty_world'),
         DeclareLaunchArgument('gui', default_value='true'),
+        DeclareLaunchArgument('dashboard', default_value='true',
+                              description='open the live evaluation dashboard window'),
     ]
     sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
@@ -47,5 +50,8 @@ def generate_launch_description():
             'size': LaunchConfiguration('size'),
             'linearize_about': LaunchConfiguration('linearize_about'),
         }])
+    dashboard = Node(
+        package='mecanum_mpc', executable='dashboard', name='mpc_dashboard', output='screen',
+        condition=IfCondition(LaunchConfiguration('dashboard')))
     # give the robot a few seconds to spawn and settle before the path starts
-    return LaunchDescription(args + [sim, TimerAction(period=8.0, actions=[mpc])])
+    return LaunchDescription(args + [sim, TimerAction(period=8.0, actions=[mpc, dashboard])])

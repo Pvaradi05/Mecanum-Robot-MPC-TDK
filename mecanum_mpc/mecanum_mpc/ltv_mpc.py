@@ -179,6 +179,8 @@ class LTVMPC:
         M = np.clip(self.Gp @ w0, -self.torque_max, self.torque_max)
         self.prev_sol = (xs, ws)
         self.prev_dw = w0 - w_bar[0]
-        return w0, dict(torques=M, predicted=xs, status=res.info.status, iters=res.info.iter,
+        return w0, dict(torques=M, predicted=xs, plan_w=ws, w_bar0=w_bar[0], ok=ok,
+                        cost=float(res.info.obj_val) if ok else float('nan'),
+                        status=res.info.status, iters=res.info.iter,
                         solve_ms=res.info.run_time * 1e3,
                         total_ms=(time.perf_counter() - t0) * 1e3)

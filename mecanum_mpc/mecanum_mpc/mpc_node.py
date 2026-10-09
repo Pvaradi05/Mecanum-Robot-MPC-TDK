@@ -4,6 +4,7 @@ Subscribes  /odom (nav_msgs/Odometry; pose in odom, twist in base_footprint = bo
 Publishes   /model/own_mecanum/joint/<corner>_wheel_joint/cmd_force  (std_msgs/Float64, N m)
             /mpc/reference  /mpc/predicted  (nav_msgs/Path, frame odom, for RViz)
             /mpc/tracking_error  (std_msgs/Float64, m)
+            /mpc/status  (std_msgs/Float64MultiArray, all per-step statistics, see stats.py)
 Gazebo      the reference path is drawn on the floor as model "mpc_reference_path" (draw_path)
 
 On the first odometry message the chosen path is anchored at the robot's current pose (the path
@@ -28,9 +29,11 @@ from nav_msgs.msg import Odometry, Path
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.signals import SignalHandlerOptions
-from std_msgs.msg import Float64
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Float64, Float64MultiArray, MultiArrayDimension
 
 from . import gz_draw, model
+from .stats import FIELDS, PredictionTracker, step_stats
 from .ltv_mpc import LTVMPC, wrap
 from .references import SHAPES, Reference
 
@@ -98,7 +101,12 @@ class MPCNode(Node):
         self.ref_pub = self.create_publisher(Path, '/mpc/reference', latched)
         self.pred_pub = self.create_publisher(Path, '/mpc/predicted', 10)
         self.err_pub = self.create_publisher(Float64, '/mpc/tracking_error', 10)
+        self.status_pub = self.create_publisher(Float64MultiArray, '/mpc/status', 10)
         self.create_subscription(Odometry, 'odom', self._on_odom, 10)
+        self.create_subscription(JointState, 'joint_states', self._on_joints, 10)
+        self.joint_speeds = None                         # real wheel speeds (sim), for slip
+        self.pred_tracker = PredictionTracker(N)
+        self.last_step = None
 
         self.x = None
         self.rejected = 0
@@ -153,6 +161,13 @@ class MPCNode(Node):
                 gz_draw.spawn(gz_draw.path_sdf('mpc_reference_path', pts), 'mpc_reference_path',
                               self.world, self.get_logger())
 
+    def _on_joints(self, msg):
+        try:
+            self.joint_speeds = np.array(
+                [msg.velocity[msg.name.index(f'{w}_wheel_joint')] for w in model.WHEELS])
+        except (ValueError, IndexError):
+            pass
+
     def _publish_reference(self):
         path = Path()
         path.header.frame_id = 'odom'
@@ -190,6 +205,7 @@ class MPCNode(Node):
 
         err = math.hypot(x[0] - xr[0, 0], x[1] - xr[0, 1])
         self.err_pub.publish(Float64(data=err))
+        self._publish_status(t, now, x, xr[0], wr[0], info, M)
         self.log.writerow([f'{t:.3f}', *np.round(x, 5), *np.round(xr[0], 5), *np.round(w, 5),
                            *np.round(M, 5), f"{info['solve_ms']:.3f}", f"{info['total_ms']:.3f}",
                            info['status']])
@@ -224,6 +240,21 @@ class MPCNode(Node):
             ps.pose.position.x, ps.pose.position.y = float(X), float(Y)
             pred.poses.append(ps)
         self.pred_pub.publish(pred)
+
+    def _publish_status(self, t, now, x, xr0, wr0, info, M):
+        info['M'] = M
+        kin = self.p.wheel_jacobian() @ x[3:]           # wheel speeds the rolling constraint implies
+        wheels = self.joint_speeds if self.joint_speeds is not None else kin
+        st = step_stats(self.p, self.mpc, x, xr0, wr0, info, wheels)
+        st.update(self.pred_tracker.update(x, info['predicted']))
+        st.update(t=t, lap=self.ref.lap(t) if self.loop else 0,
+                  period_ms=1e3 * (now - self.last_step) if self.last_step else np.nan,
+                  slip=self.p.R * float(np.sqrt(np.mean((wheels - kin) ** 2))))
+        self.last_step = now
+        msg = Float64MultiArray()
+        msg.layout.dim.append(MultiArrayDimension(label=','.join(FIELDS), size=len(FIELDS)))
+        msg.data = [float(st[k]) for k in FIELDS]
+        self.status_pub.publish(msg)
 
     def stop(self):
         for pub in self.pubs:

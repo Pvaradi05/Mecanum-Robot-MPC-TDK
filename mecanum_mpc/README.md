@@ -21,6 +21,17 @@ ros2 run mecanum_mpc offline_sim --shape all --heading both               # no G
 
 The launch starts the sim with `drive:=effort` (torque-driven wheels, ground-truth `/odom`), waits 8 s, then starts `mpc_node`. The node anchors the path at the robot's current pose and drives it once (or `laps` times) with 2 s speed ramps, then holds the end pose. With `loop:=true` there is one ramp up, then the path repeats at constant speed until shutdown. With heading following the path, the heading keeps counting up by 2π per lap on the circle and square instead of jumping back. Example, circle with heading following the path: lap 1 (incl. start) 2.0 mm RMS, laps 2–3 1.7 mm RMS / 3.0 mm max. Every run writes `~/ros2_ws/mpc_logs/<shape>_<heading>_<speed>_<time>.csv`. RViz topics: `/mpc/reference`, `/mpc/predicted` (frame `odom`), `/mpc/tracking_error`.
 
+**Live dashboard.** `mpc_sim.launch.py` opens a matplotlib window by default (`dashboard:=false` to skip it). It can also be started separately: `ros2 run mecanum_mpc dashboard` (`-p window:=30.0` seconds of history; `-p snapshot:=file.png -p snapshot_after:=40.0` saves one image off-screen and exits). The node publishes every step on `/mpc/status` (`std_msgs/Float64MultiArray`; field names in `layout.dim[0].label`, defined in `stats.py`). Panels:
+
+- **Path:** reference, robot trail, the MPC's planned 1 s trajectory.
+- **Tracking error:** split into **cross-track** (off the path) and **along-track** (ahead of / behind the timing).
+- **Heading and speed error.**
+- **Body forces:** **feedforward** (from the model, the inverse dynamics of the reference) vs **feedback** (MPC correction), plus the size of the non-holonomic terms m_s·v·r, m_s·u·r. Large feedback means model mismatch.
+- **Model vs reality:** the measured state vs what the MPC predicted 1 step (50 ms) and 1 horizon (1 s) earlier, and **wheel slip** (real joint speeds vs what the rolling constraint implies).
+- **Wheel torques and speeds:** against their limits, with usage in % and how many plan steps have a limit active.
+- **Solver:** QP time, step time, control period vs the 50 ms budget, inaccurate/fallback solves.
+- **Text panel:** live values, RMS/max over the window, per lap and since start, real-time factor.
+
 **Path on the floor in Gazebo.** When the path is anchored, the node also spawns it into the world as a static, visual-only model `mpc_reference_path`: an orange ribbon 2 cm wide, with a green disc at the start (`gz_draw.py`). It has no collisions, so it doesn't affect the robot. A new run in the same sim replaces it. Turn it off with `-p draw_path:=false`; set `world_name` for worlds not called `default`. This works because in this sim `/odom` is the world frame, which was checked by spawning at (−2, −0.5).
 
 Dependency outside rosdep: the OSQP Python bindings (`pip install --user --break-system-packages osqp`, 1.1.3 on this machine).
@@ -34,6 +45,7 @@ Dependency outside rosdep: the OSQP Python bindings (`pip install --user --break
 | `ltv_mpc.py` | The MPC: one sparse QP per step (OSQP). |
 | `mpc_node.py` | ROS node: odometry in, wheel torques out, logging. |
 | `evaluate.py`, `offline_sim.py` | Log analysis, closed loop against the Python model. |
+| `stats.py`, `dashboard.py` | Per-step statistics on `/mpc/status`, live dashboard window. |
 | `test/` | Model = paper eq. (64), Jacobians = finite differences, offline tracking (`python3 -m pytest test/`). |
 
 **Model** (equivalent to the paper's eq. 64, verified to 1e-8 in `test/`). State `x = [X, Y, ψ, u, v, r]` (world pose, body velocities), input `w = [F_ξ, F_η, τ]` (body wrench):
