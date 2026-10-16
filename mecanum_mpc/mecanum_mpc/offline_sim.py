@@ -17,10 +17,12 @@ SIZES = {'circle': 0.75, 'ellipse': 1.0, 'figure8': 1.0, 'square': 1.5}
 
 
 def run(shape='circle', heading='fixed', speed=0.2, offset=(0.0, 0.0, 0.0), urdf=DEFAULT_URDF,
-        dt=0.05, N=20, linearize_about='reference', plant_params=None, **mpc_kw):
+        dt=0.05, N=20, linearize_about='reference', plant_params=None, corner_radius=None,
+        force_reference=True, average_force_reference=False, **mpc_kw):
     p = model.params_from_urdf(urdf)
     plant = plant_params or p
-    ref = Reference(p, shape, SIZES[shape], speed=speed, heading=heading)
+    ref = Reference(p, shape, SIZES[shape], speed=speed, heading=heading,
+                    corner_radius=corner_radius)
     mpc = LTVMPC(p, dt=dt, N=N, linearize_about=linearize_about, **mpc_kw)
     x = np.zeros(6)
     x[:3] = offset
@@ -28,7 +30,10 @@ def run(shape='circle', heading='fixed', speed=0.2, offset=(0.0, 0.0, 0.0), urdf
     log = []
     for i in range(steps):
         t = i * dt
-        xr, wr = ref.sample(t + dt * np.arange(N + 1))
+        xr, wr = ref.sample(t + dt * np.arange(N + 1),
+                            w_window=dt if average_force_reference else 0.0)
+        if not force_reference:
+            wr = np.zeros_like(wr)
         w, info = mpc.solve(x, xr, wr[:N])
         w_applied = p.torque_to_wrench() @ info['torques']   # what the wheels actually deliver
         log.append(np.r_[t, x, xr[0], info['torques'], info['solve_ms'], info['total_ms'],

@@ -26,6 +26,14 @@ def generate_launch_description():
         DeclareLaunchArgument('laps', default_value='1.0', description='ignored with loop:=true'),
         DeclareLaunchArgument('size', default_value='0.0',
                               description='radius / semi-axis / half-width / side [m]; 0 = default'),
+        DeclareLaunchArgument('corner_radius', default_value='-1.0',
+                              description='square only [m]; 0.0 = sharp corners, < 0 = 15 % of '
+                                          'the side'),
+        DeclareLaunchArgument('force_reference', default_value='true',
+                              description='false: no feedforward wrench, the MPC only gets x_ref'),
+        DeclareLaunchArgument('average_force_reference', default_value='false',
+                              description='true: feedforward wrench averaged over each control '
+                                          'period (finite at sharp corners)'),
         DeclareLaunchArgument('linearize_about', default_value='reference',
                               description='reference (LTV-MPC) | prediction (one SQP-RTI step)'),
         DeclareLaunchArgument('world', default_value='empty_world'),
@@ -48,6 +56,9 @@ def generate_launch_description():
             'laps': LaunchConfiguration('laps'),
             'loop': LaunchConfiguration('loop'),
             'size': LaunchConfiguration('size'),
+            'corner_radius': LaunchConfiguration('corner_radius'),
+            'force_reference': LaunchConfiguration('force_reference'),
+            'average_force_reference': LaunchConfiguration('average_force_reference'),
             'linearize_about': LaunchConfiguration('linearize_about'),
         }])
     dashboard = Node(

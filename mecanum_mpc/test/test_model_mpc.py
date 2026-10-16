@@ -5,6 +5,7 @@ from scipy.integrate import solve_ivp
 
 from mecanum_mpc import model
 from mecanum_mpc.offline_sim import run
+from mecanum_mpc.references import Reference
 
 URDF = os.path.join(os.path.dirname(__file__), '..', '..', 'tb3_sim_bringup', 'models',
                     'own_mecanum', 'robot.urdf')
@@ -56,6 +57,20 @@ def test_jacobians_match_finite_differences():
         An = np.array([(model.f(x + h * e, w, p) - model.f(x - h * e, w, p)) / (2 * h) for e in np.eye(6)]).T
         Bn = np.array([(model.f(x, w + h * e, p) - model.f(x, w - h * e, p)) / (2 * h) for e in np.eye(3)]).T
         assert np.allclose(A, An, atol=1e-6) and np.allclose(B, Bn, atol=1e-6)
+
+
+def test_square_corner_radius():
+    p = model.params_from_urdf(URDF)
+    default = Reference(p, 'square', 1.5, heading='tangent')
+    same = Reference(p, 'square', 1.5, heading='tangent', corner_radius=0.225)
+    assert np.allclose(default.x, same.x)
+    sharp = Reference(p, 'square', 1.5, corner_radius=0.0)
+    assert abs(sharp.length - 6.0) < 1e-6 and np.isfinite(sharp.x).all()
+    # at a sharp corner the exact force reference is an impulse: huge as a point value,
+    # about me * dv / dt as the mean over a control step
+    t = np.arange(0, sharp.duration, 0.05)
+    assert np.abs(sharp.sample(t)[1]).max() > 100
+    assert np.abs(sharp.sample(t, w_window=0.05)[1]).max() < 15
 
 
 def test_ltv_mpc_tracks_on_nominal_model():

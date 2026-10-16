@@ -51,6 +51,10 @@ class MPCNode(Node):
         self.shape = P('shape', 'circle').value
         self.heading = P('heading', 'fixed').value
         self.size = P('size', 0.0).value            # 0 = per-shape default
+        corner_radius = P('corner_radius', -1.0).value   # square only; < 0 = 15 % of the side
+        self.force_ref = P('force_reference', True).value   # False: w_ref = 0, only x_ref is tracked
+        # True: w_ref = its mean over each control period instead of its value at the step time
+        self.avg_force_ref = P('average_force_reference', False).value
         self.speed = P('speed', 0.2).value
         self.laps = P('laps', 1.0).value              # ignored with loop:=true
         self.loop = P('loop', False).value            # drive the path until shutdown
@@ -83,7 +87,8 @@ class MPCNode(Node):
         self.dt, self.N = dt, N
         sizes = {'circle': 0.75, 'ellipse': 1.0, 'figure8': 1.0, 'square': 1.5}
         self.ref = Reference(self.p, self.shape, self.size or sizes[self.shape], speed=self.speed,
-                             laps=self.laps, heading=self.heading, loop=self.loop)
+                             laps=self.laps, heading=self.heading, loop=self.loop,
+                             corner_radius=None if corner_radius < 0 else corner_radius)
         if self.ref.max_wheel_speed > wheel_speed_max:
             self.get_logger().warn(
                 f'reference needs {self.ref.max_wheel_speed:.1f} rad/s wheel speed > limit '
@@ -189,7 +194,10 @@ class MPCNode(Node):
                 return                                   # torque bridge not connected yet
             self.t0 = now
         t = now - self.t0
-        xr, wr = self.ref.sample(t + self.dt * np.arange(self.N + 1))
+        xr, wr = self.ref.sample(t + self.dt * np.arange(self.N + 1),
+                                 w_window=self.dt if self.avg_force_ref else 0.0)
+        if not self.force_ref:
+            wr = np.zeros_like(wr)
         xr = self._to_odom(xr)
         x = self.x.copy()
         x[2] = xr[0, 2] + wrap(x[2] - xr[0, 2])         # unwrap measured heading onto the reference

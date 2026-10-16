@@ -19,9 +19,10 @@ from .model import Params
 SHAPES = ('circle', 'ellipse', 'figure8', 'square')
 
 
-def _curve(shape, size):
+def _curve(shape, size, corner_radius=None):
     """Return c(theta) -> (n, 2) points, theta in [0, 2*pi), plus the period.
-    size = radius (circle) / semi-major axis (ellipse) / half-width (figure-8) / side (square)."""
+    size = radius (circle) / semi-major axis (ellipse) / half-width (figure-8) / side (square).
+    corner_radius (square only): None = 15 % of the side, 0 = sharp corners."""
     if shape == 'circle':
         return lambda t: np.c_[size * np.sin(t), size * (1 - np.cos(t))]
     if shape == 'ellipse':
@@ -31,15 +32,18 @@ def _curve(shape, size):
         a = np.arctan2(size, size)             # start tangent of (a sin t, a sin t cos t) is 45 deg
         Rm = np.array([[np.cos(-a), -np.sin(-a)], [np.sin(-a), np.cos(-a)]])
         return lambda t: np.c_[size * np.sin(t), size * np.sin(t) * np.cos(t)] @ Rm.T
-    if shape == 'square':                      # rounded corners, radius 15 % of the side
-        rc = 0.15 * size
+    if shape == 'square':                      # rounded corners, default radius 15 % of the side
+        rc = 0.15 * size if corner_radius is None else float(corner_radius)
+        if not 0 <= rc <= size / 2:
+            raise ValueError(f'corner_radius must be in [0, {size / 2}], got {rc}')
         e = size - 2 * rc                      # straight part of each side
         per = 4 * e + 2 * np.pi * rc
         segs = []                              # start at the middle of the bottom side, CCW
         pos, head = np.array([0.0, 0.0]), 0.0
         for length, kind in [(e / 2, 'line')] + [(np.pi / 2 * rc, 'arc'), (e, 'line')] * 3 + \
                 [(np.pi / 2 * rc, 'arc'), (e / 2, 'line')]:
-            segs.append((length, kind, pos.copy(), head))
+            if length > 0:                     # corner_radius 0: no arcs, the heading just jumps
+                segs.append((length, kind, pos.copy(), head))
             if kind == 'line':
                 pos = pos + length * np.array([np.cos(head), np.sin(head)])
             else:
@@ -70,12 +74,13 @@ class Reference:
 
     def __init__(self, p: Params, shape='circle', size=0.75, speed=0.2, laps=1.0,
                  heading='fixed', ramp_time=2.0, heading_smoothing=0.25, dt=0.002,
-                 loop=False):
+                 loop=False, corner_radius=None):
         """loop=False: drive `laps` laps, ramp down, then hold the end pose.
-        loop=True: ramp up once, then drive the path forever (`laps` is ignored)."""
+        loop=True: ramp up once, then drive the path forever (`laps` is ignored).
+        corner_radius: square only, see _curve."""
         if heading not in ('fixed', 'tangent'):
             raise ValueError("heading must be 'fixed' or 'tangent'")
-        c = _curve(shape, size)
+        c = _curve(shape, size, corner_radius)
 
         # arc-length table of the curve
         th = np.linspace(0, 2 * np.pi, 200001)
@@ -148,10 +153,23 @@ class Reference:
             return 0 if time < self.lap_start else 1 + int((time - self.lap_start) // self.lap_time)
         return 0
 
-    def sample(self, times):
+    def sample(self, times, w_window=0.0):
         """x_ref, w_ref at the given times (s since start). Without loop the end pose is held
-        afterwards; with loop the 2nd lap of the table repeats forever."""
+        afterwards; with loop the 2nd lap of the table repeats forever.
+
+        w_window > 0: w_ref is its mean over [t, t + w_window] instead of its value at t. Over
+        one control period that is what a zero-order hold has to deliver. It stays finite where
+        the reference velocity jumps (sharp corners): the exact w_ref is an impulse there, and
+        its point value is either 0 or huge."""
         times = np.asarray(times, dtype=float)
+        x, w = self._sample(times)
+        if w_window > 0:
+            n = max(1, round(w_window / (self.t[1] - self.t[0])))
+            w = np.mean([self._sample(times + (j + 0.5) * w_window / n)[1] for j in range(n)],
+                        axis=0)
+        return x, w
+
+    def _sample(self, times):
         if self.loop:
             k = np.maximum(0, np.floor((times - self.lap_start) / self.lap_time))
             times = times - k * self.lap_time
