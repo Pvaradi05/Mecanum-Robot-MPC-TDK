@@ -1,6 +1,6 @@
 # tb3_sim_bringup
 
-Gazebo (gz sim) simulations on ROS 2 Jazzy for **the own mecanum robot** (the one the MPC in [`mecanum_mpc`](../mecanum_mpc/README.md) controls) and a TurtleBot3 Waffle Pi, diff-drive or mecanum variant. Each robot can be driven via `/cmd_vel`; the own robot can also be driven by wheel torques (`drive:=effort`).
+Gazebo (gz sim) simulations on ROS 2 Jazzy for **the own mecanum robot** (the robot the MPC controls) and a TurtleBot3 Waffle Pi, diff-drive or mecanum variant. Each robot can be driven via `/cmd_vel`; the own robot can also be driven by wheel torques (`drive:=effort`).
 
 ## What's here
 
@@ -151,7 +151,7 @@ Your own robot from [Kemenylegeny/Mecanum-TDK `assets/robots/own_mecanum`](https
 ```bash
 ros2 launch tb3_sim_bringup own_mecanum_sim.launch.py   # same args: world:=… x_pose:= y_pose:= gui:=false
 #   drive:=effort  wheel torques on /model/own_mecanum/joint/<corner>_wheel_joint/cmd_force
-#                  instead of /cmd_vel, ground-truth /odom (used by mecanum_mpc)
+#                  instead of /cmd_vel, ground-truth /odom (for torque-input controllers)
 ros2 run tb3_sim_bringup tb3_mecanum_teleop_keys       # same teleop, same /cmd_vel
 ```
 
@@ -185,7 +185,7 @@ Notes:
 - `chassis_visual.stl` has small gaps. Integrated about different reference points, the volume, centroid and inertia change by less than 0.5 %, 1 mm and 0.5 %.
 - `chassis_collision.stl` is a closed hull of 7.6 L, so it is not usable for this.
 
-Checked headless in Gazebo with the MPC: the robot is stable on the lighter rollers, and tracking stays at 2.5 mm RMS. See `mecanum_mpc`.
+Checked headless in Gazebo with the v1 MPC (branch `v1`): the robot is stable on the lighter rollers, and tracking stays at 2.5 mm RMS.
 
 ### Verified (2026-10-05, headless)
 
@@ -211,5 +211,5 @@ Pure physics, no sensors, real-time cap off, 10 s sim at 1 ms steps (DART is sin
 
 - `~/ros2_ws/src/my_robot_description` is a **separate, unrelated** older experiment (a custom "box_bot" URDF + `voice_controller*.py` scripts on `/model/box_bot/cmd_vel`) — untouched by this work.
 - `~/ros2_ws/src` has been a git repo since 2026-10-05; `my_robot_description` is excluded. This file still records how and why the sim was set up, and the commit history records later changes.
-- MPC control: implemented for the own robot as [`mecanum_mpc`](../mecanum_mpc/README.md), an LTV-MPC with wheel-torque inputs on `drive:=effort`. Research notes, results and benchmarks are in [docs/mecanum_mpc_options.md](docs/mecanum_mpc_options.md).
+- MPC control: the first controller (v1, an LTV-MPC with wheel-torque inputs on `drive:=effort`, package `mecanum_mpc`) is kept on the [`v1` branch](https://github.com/Pvaradi05/Mecanum-Robot-MPC-TDK/tree/v1/mecanum_mpc). Its research notes, results and benchmarks are in [docs/mecanum_mpc_options.md](docs/mecanum_mpc_options.md). A new controller, using a different method, is being written from scratch on `main` (since 2026-10-16).
 - Natural next steps, not yet done: SLAM/mapping (`turtlebot3_cartographer`), autonomous navigation (`turtlebot3_navigation2` — for the mecanum variant, Nav2's controller needs holonomic settings, e.g. MPPI with `motion_model: Omni`), RViz visualization, a custom world.

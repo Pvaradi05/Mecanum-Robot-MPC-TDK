@@ -123,7 +123,7 @@
        drive:=effort    no MecanumDrive. Each wheel joint takes a torque [N m] on
                         /model/own_mecanum/joint/<corner>_wheel_joint/cmd_force (ApplyJointForce),
                         and /odom + odom->base_footprint TF come from the TRUE model pose
-                        (OdometryPublisher), i.e. ideal state estimation. Used by mecanum_mpc. -->
+                        (OdometryPublisher), i.e. ideal state estimation. For torque-input controllers. -->
   <xacro:arg name="drive" default="velocity"/>
 
   <xacro:if value="${'$(arg drive)' == 'effort'}">

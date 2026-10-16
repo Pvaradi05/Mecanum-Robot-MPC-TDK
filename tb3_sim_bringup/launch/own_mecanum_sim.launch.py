@@ -117,7 +117,7 @@ def generate_launch_description():
             'drive', default_value='velocity',
             description="'velocity': MecanumDrive on /cmd_vel. 'effort': wheel torques on "
                         "/model/own_mecanum/joint/<corner>_wheel_joint/cmd_force and ground-truth "
-                        "/odom (for mecanum_mpc)"),
+                        "/odom (for torque-input controllers)"),
 
         # package://tb3_sim_bringup/... is looked up under <prefix>/share by Gazebo
         AppendEnvironmentVariable('GZ_SIM_RESOURCE_PATH', os.path.dirname(this_pkg)),
