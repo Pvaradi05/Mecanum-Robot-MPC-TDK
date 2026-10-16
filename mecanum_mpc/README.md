@@ -4,7 +4,7 @@ Linear time-varying MPC (LTV-MPC) that makes the own mecanum robot (`tb3_sim_bri
 
 > I. Zeidis, K. Zimmermann, *Dynamics of a four-wheeled mobile robot with Mecanum wheels*, ZAMM 99 (2019) e201900173, doi:10.1002/zamm.201900173
 
-Written 2026-10-05. Background (LTV vs NMPC, why linearising is fine here) is in `tb3_sim_bringup/docs/mecanum_mpc_options.md`.
+Written 2026-10-05, updated 2026-10-16 (square corner radius, feedforward options, corner-radius benchmark). Background (LTV vs NMPC, why linearising is fine here) is in `tb3_sim_bringup/docs/mecanum_mpc_options.md`.
 
 ## Run
 
@@ -14,6 +14,9 @@ ros2 launch mecanum_mpc mpc_sim.launch.py shape:=figure8 heading:=tangent
 #   loop:=false (default: drive `laps` laps, laps:=1, then hold the end pose)
 #   loop:=true  (drive the path over and over until Ctrl-C, tracking report after every lap)
 #   size:=0 (= default: circle r 0.75 m, ellipse 1.0 x 0.5 m semi-axes, figure-8 2 x 1 m, square 1.5 m)
+#   corner_radius:=0.06 (square only, m; 0.0 = sharp corners, default 15 % of the side)
+#   force_reference:=false (no feedforward wrench, the MPC only gets x_ref)
+#   average_force_reference:=true (feedforward averaged over each control period)
 #   linearize_about:=reference|prediction   world:=empty_world   gui:=true|false
 ros2 run mecanum_mpc evaluate ~/ros2_ws/mpc_logs/*.csv --plot runs.png    # metrics + plots
 ros2 run mecanum_mpc offline_sim --shape all --heading both               # no Gazebo, nominal model
@@ -68,7 +71,9 @@ Wheel torques ↔ wrench: `w = Wᵀ M` with `R φ̇ᵢ = u + s_vᵢ v + s_rᵢ L
 
 Defaults are `Q = diag(1000, 1000, 250, 5, 5, 1)`, `R = diag(0.01, 0.01, 1)`, `Rd = diag(0.1, 0.1, 10)`. `linearize_about:=prediction` linearises around the previous solution instead, which is one SQP real-time iteration of an NMPC.
 
-**References.** Paths start at the robot, heading along its x axis. Constant speed with cosine ramps. `heading:=fixed` keeps ψ constant: the robot never rotates, so the bilinear (Coriolis) terms are 0 along the reference. `heading:=tangent` follows the path direction, smoothed with σ = 0.25 s so the square's corners don't demand infinite angular acceleration. The square has rounded corners (radius 15 % of the side).
+**References.** Paths start at the robot, heading along its x axis. Constant speed with cosine ramps. `heading:=fixed` keeps ψ constant: the robot never rotates, so the bilinear (Coriolis) terms are 0 along the reference. `heading:=tangent` follows the path direction, smoothed with σ = 0.25 s so the square's corners don't demand infinite angular acceleration.
+
+**Square corners.** By default the square has rounded corners, with a radius of 15 % of the side (0.225 m). `corner_radius` sets the radius, and `0.0` gives sharp corners. At a sharp corner the reference velocity jumps, so the exact feedforward wrench is an impulse. Sampled at the step time, as the node does by default, it is either 0 or 160–220 N, and that value is then applied for a whole 50 ms step. The result is a 25–35 mm overshoot at every corner. `average_force_reference:=true` uses the mean of the feedforward over each control step instead. That is what a zero-order-hold input has to deliver: at most 6–9 N at 0.2 m/s, because the impulse m_e·Δv usually spreads over two steps. **Use it with sharp corners.** On smooth paths it changes nothing measurable. `force_reference:=false` drops the feedforward entirely, so the MPC only tracks `x_ref`. Results: [MPC notes, "Corner-radius benchmark"](../tb3_sim_bringup/docs/mecanum_mpc_options.md#corner-radius-benchmark-2026-10-12).
 
 The node warns if a reference needs more than 30 rad/s wheel speed. With fixed heading the worst case is diagonal travel (|u|+|v| = v√2), which limits the path speed to 30·R/√2 ≈ **0.64 m/s** for every shape. With heading following the path, the turning adds wheel speed: limits are ≈ 0.70 m/s for the circle and ≈ 0.50 m/s for the ellipse, figure-8 and square.
 
@@ -78,14 +83,25 @@ Parameters: `ros2 param list /mecanum_mpc` (Q, R, Rd, horizon, dt, torque_max, w
 
 ## Sim vs model (measured 2026-10-05, `drive:=effort`)
 
+These measurements were taken with the **old guessed masses** (3.0 kg in total, m_e = 3.17 kg). Since 2026-10-16 the URDF has the weighed masses: 2.134 kg in total, m_e = 2.21 kg, J_e = 0.0304 kg·m², CoM 1.0 mm from the wheel centre. The model reads them from the URDF automatically. The breakaway, rolling-resistance and effective-mass numbers below have not been re-measured. Rolling resistance likely scales with the load, which would make the 0.003 N·m friction feedforward too large now (see "Lag when driving sideways").
+
 - **Breakaway:** at rest, wheels need **0.01–0.02 N·m each** before anything moves.
 - **Rolling resistance** while moving: ≈ 0.003 N·m per wheel (≈ 0.35 N total). Likely cause: the 6-sphere roller approximation has a ~0.07 mm ripple in its rolling radius, and the robot sits in a dip at standstill.
 - **Effective mass** from torque steps: ≈ 3.9 kg against the model's m_e = 3.17 kg. Probably roller spin inertia, which the paper's infinitesimal-roller model ignores.
 - **Odometry glitch:** gz `OdometryPublisher` emits one yaw-rate sample of about ±600 rad/s each time the yaw passes ±180° (an angle wrap in its differentiation; seen once per lap in loop mode). The node rejects twists the wheels can't produce.
 - **Odometry:** in effort mode, `/odom` is ground truth from Gazebo's `OdometryPublisher`, i.e. perfect state estimation.
 - **Hardware limits:** gearmotor inertia (`robot_config.json` guess: 9e-4 kg·m² reflected) is **not** in the URDF/sim. Set `extra_wheel_inertia` when moving to hardware.
-- **CoM offset:** the URDF's CoM is 13.9 mm ahead of the wheel centre; the model assumes 0.
+- **CoM offset:** the model assumes 0. With the old guessed masses the URDF's CoM was 13.9 mm ahead of the wheel centre; with the weighed, homogeneous masses it is 1.0 mm.
+- **Lag when driving sideways** (measured 2026-10-16 from the corner-radius benchmark logs). While strafing, the robot runs a steady **3.6 mm behind** the reference. While driving forward it is 0.9–1.3 mm ahead. This explains why fixed heading has about twice the error of tangent heading. The rollers only spin when the robot moves sideways, and their joint damping (1e-5 N·m·s/rad in `robot.urdf`) and spin inertia are not in the model. That is a plausible cause, but it is not verified yet. With the weighed masses (single laps, 2026-10-16), the sideways lag drops to 1.35 mm and the forward lead grows to 2.0–2.3 mm. That fits a friction feedforward tuned for the heavier robot. Details: [MPC notes](../tb3_sim_bringup/docs/mecanum_mpc_options.md#fixed-vs-tangent-heading-the-difference-is-timing-2026-10-16).
 
 ## Results
 
-See the table in `tb3_sim_bringup/docs/mecanum_mpc_options.md` ("LTV-MPC implemented").
+At 0.2 m/s in Gazebo, all measured with the old guessed masses (3.0 kg) unless noted:
+- **Weighed masses (2.134 kg), one lap each:** 2.5 mm RMS on the square with fixed heading and on the figure-8 with tangent heading.
+- **Tracking error** is 1.7–2.0 mm RMS with heading following the path and 3.2–3.6 mm with fixed heading.
+- **Distance from the path itself** is about 1 mm RMS in both modes.
+- **Sharp-cornered square:** 2.0 / 3.2 mm RMS (tangent / fixed heading) with the averaged feedforward.
+
+Tables are in [`tb3_sim_bringup/docs/mecanum_mpc_options.md`](../tb3_sim_bringup/docs/mecanum_mpc_options.md): "LTV-MPC implemented" and "Corner-radius benchmark".
+
+Known issue: the "cross-track" columns of `evaluate` (and `crosstrack_*` in the benchmark's `summary.csv`) measure the distance to the nearest *logged* reference point. At 0.2 m/s and 50 ms those points are 10 mm apart, which alone gives about 2.8 mm RMS even for a robot exactly on the path. Use the tracking error, or the cross-track numbers in the MPC notes, which are measured to the path polyline. The dashboard's cross-track (`stats.py`) is a projection and not affected.

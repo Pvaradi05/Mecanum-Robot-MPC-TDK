@@ -1,6 +1,6 @@
 # MPC control for the mecanum Waffle Pi — options (research notes)
 
-Status: **research only, nothing implemented.** Collected 2026-10-01 to pick up later: discuss, choose one, then implement.
+Status (updated 2026-10-16): **option C is implemented** as `src/mecanum_mpc`: an LTV-MPC with torque inputs on the exact Chaplygin model, for the own mecanum robot rather than the Waffle Pi. See the dated sections from ["Update 2026-10-05"](#update-2026-10-05-goal--dynamic-path-tracking-option-c-linear-vs-nonlinear-mpc) on. The candidate survey below is the original research from 2026-10-01 and is kept as it was.
 Context: the mecanum variant in this package (`tb3_waffle_pi_mecanum_sim.launch.py`, see the [README](../README.md#mecanum-variant)) is driven by gz-sim's `MecanumDrive` from `/cmd_vel` (`TwistStamped`, uses `linear.x`, `linear.y`, `angular.z`). Any controller below only needs to publish that.
 
 Repo stats/status below were checked on 2026-10-01 via the GitHub API — re-check before relying on them.
@@ -131,8 +131,91 @@ Gazebo, physical 6-sphere rollers, 0.2 m/s, one lap, N = 20, Δt = 0.05 s. Metri
 QP solve: 0.6 ms median, 1.2 ms p95; a full control step in Python takes 2–7 ms. The first 3 s peak at about 10 mm: the wheels need 0.01–0.02 N·m to break away from standstill.
 
 Observations, not yet explained:
-- **Fixed heading has about 2× the error of tangent heading** (steady ~3 mm). Fixed heading means more sideways and diagonal rolling, where the rollers spin. Rolling resistance and roller inertia are not in the model (see the mecanum_mpc README, "Sim vs model"). The CoM offset (13.9 mm) is another candidate.
+- **Fixed heading has about 2× the error of tangent heading** (steady ~3 mm). Fixed heading means more sideways and diagonal rolling, where the rollers spin. Rolling resistance and roller inertia are not in the model (see the mecanum_mpc README, "Sim vs model"). The CoM offset (13.9 mm) is another candidate. → Narrowed down on 2026-10-16: the extra error is a lag along the path while strafing, not a deviation from the path. See [below](#fixed-vs-tangent-heading-the-difference-is-timing-2026-10-16).
 - **One-off glitches:** gz `OdometryPublisher` emits single yaw-rate samples of ±600 rad/s (about 2π/0.01 s). The node now rejects them; before that, they caused one "infeasible" QP per run.
 - **Control-timing gap:** one run had a 0.28 s gap between control steps (a WSL stall while the sim kept going), which gave a 27.6 mm spike during start-up.
 
 Next candidates: NMPC (acados SQP-RTI) on the same model and paths; higher speeds (fixed-heading wheel-speed limit ≈ 0.64 m/s); integral or disturbance-observer action against the bias; adding roller inertia and rolling resistance to the model.
+
+## Corner-radius benchmark (2026-10-12)
+
+**Question:** how does the LTV-MPC cope as the square's corners get sharper, and what does the feedforward wrench `w_ref` contribute?
+
+**Setup:**
+- 1.5 m square at 0.2 m/s, one lap per run, a fresh headless Gazebo per run.
+- Corner radius 22.5 cm (the default), 12, 6, 3 and 0 cm (sharp).
+- Both heading modes.
+- Three feedforward variants:
+  - **sampled**: `w_ref` at the step time, the default;
+  - **none**: `force_reference:=false`;
+  - **averaged**: `average_force_reference:=true`, mean over each 50 ms step. Run only at radius 0.
+- The 22.5 cm and 3 cm runs were repeated twice more. Between repeats, RMS varied by under 0.2 mm and max by up to 2 mm.
+- The scripts, logs and charts are in `~/ros2_ws/mpc_logs/corner_radius_benchmark/`, outside this repo (`run_benchmark.py`, `plot_benchmark.py`, `corner_radius_{tangent,fixed}.png`, `summary.csv`).
+
+Tracking error RMS / max [mm], from t = 3 s to the end of the lap:
+
+| corner radius | tangent, sampled | tangent, none | tangent, averaged | fixed, sampled | fixed, none | fixed, averaged |
+|---|---|---|---|---|---|---|
+| 22.5 cm | 2.1 / 6.9 | 1.9 / 6.1 | | 3.2 / 5.5 | 3.3 / 6.3 | |
+| 12 cm | 1.9 / 3.9 | 1.9 / 4.0 | | 3.2 / 5.4 | 3.1 / 5.4 | |
+| 6 cm | 1.9 / 4.6 | 1.9 / 3.9 | | 3.1 / 5.6 | 3.2 / 5.5 | |
+| 3 cm | 1.9 / 5.0 | 2.1 / 5.5 | | 3.1 / 6.0 | 3.2 / 6.9 | |
+| 0 (sharp) | **4.4 / 24.5** | 2.2 / 10.6 | **2.0 / 7.8** | **6.1 / 33.8** | 3.3 / 12.6 | **3.2 / 9.5** |
+
+Findings:
+- **Rounded corners, even 3 cm: the feedforward makes no difference** beyond run-to-run spread. At 0.2 m/s the forces are tiny (wheel torques ≤ 0.045 N·m), and the feedback does the work. That may change at higher speeds, which haven't been tested.
+- **Sharp corners: the sampled feedforward hurts.** The reference velocity jumps, so the exact `w_ref` is an impulse. Sampled at one instant (0, or 160–220 N) and held for 50 ms, it overshoots. Averaged over the step, it is at most 6–9 N.
+  - At every corner there is a spike of 24–34 mm, and wheel torque reaches 0.13–0.20 N·m, against 0.03–0.05 N·m otherwise.
+  - Averaging `w_ref` over the step removes the spikes: RMS is as good as on rounded corners, and the max is lower than with no feedforward.
+  - **Use `average_force_reference:=true` with sharp corners.** It is still off by default.
+- **Distance from the path** is 0.7–1.4 mm RMS (max 2.6–7.4 mm) for every run except sharp corners with the sampled feedforward (3.5–4.0 mm RMS). That holds for both heading modes, so most of the tracking error is along the path, i.e. timing.
+- **The `crosstrack_*` columns in `summary.csv` are not valid.** They measure the distance to the nearest logged reference point, and those points are 10 mm apart, which gives about 2.8 mm RMS even for a robot exactly on the path. The cross-track numbers here were recomputed against the path polyline. The same metric is in `mecanum_mpc evaluate`.
+
+## Fixed vs tangent heading: the difference is timing (2026-10-16)
+
+Fixed-heading square from the benchmark logs (radius 22.5, 12 and 3 cm), split by which way the robot drives on each side:
+
+| side driven | position error RMS | along the path (mean) | across the path (mean) |
+|---|---|---|---|
+| forward (u = ±0.2 m/s) | 2.0 mm | 1.3 mm **ahead** | ≤ 0.3 mm |
+| sideways (v = ±0.2 m/s) | 3.8–3.9 mm | 3.6 mm **behind** | ≤ 0.3 mm |
+| (tangent heading, always forward) | 2.1 mm | 0.9 mm ahead | 0.6 mm |
+
+**The extra error of fixed heading is a constant lag while strafing.** The robot stays on the path but runs late.
+- **Why a constant lag:** some steady resistance in sideways motion is missing from the model. Only the MPC's feedback opposes it, and the feedback has no integral action.
+- **Plausible source, not verified:** driving straight forward, the roller in contact doesn't turn; driving sideways, the rollers spin. The roller joints have damping 1e-5 N·m·s/rad in `robot.urdf`, plus spin inertia, and neither is in the model.
+- **The small lead when driving forward** may be the 0.003 N·m friction feedforward overcompensating. Also unverified. The weighed masses (next section) point the same way: on the lighter robot the lead grows.
+
+Fix candidates:
+- integral or disturbance-observer action;
+- a friction feedforward that depends on the direction of travel;
+- roller damping in the model.
+
+## Weighed masses (2026-10-16)
+
+The robot was weighed: 1927.4 g for the body without wheels and 51.65 g per wheel, 2.134 kg in total. `robot.urdf` now has these masses, with every component homogeneous. Method and table: tb3_sim_bringup README, "Masses". Applied by [`analysis/set_masses.py`](analysis/set_masses.py).
+
+**Model parameters, old guesses → weighed:**
+
+| parameter | old | weighed |
+|---|---|---|
+| m_s | 3.0 kg | 2.134 kg |
+| m_e | 3.17 kg | 2.21 kg |
+| J_e | | 0.0304 kg·m² |
+| J₁ | | 1.85e-5 kg·m² |
+| CoM offset | 13.9 mm | 1.0 mm |
+
+**Everything measured before this date used the old masses:** the tables above, the benchmark, and `lin_check.py`, whose parameters are hardcoded. The friction feedforward (0.003 N·m) and the "Sim vs model" numbers in the mecanum_mpc README were also measured on the 3.0 kg robot.
+
+Quick check, one headless lap each, metrics after t = 3 s:
+
+| run | old masses | weighed masses | mean offset along the path, weighed |
+|---|---|---|---|
+| square (1.5 m), fixed | 3.2 / 5.4 mm | **2.5 / 5.6 mm** | forward sides 2.3 mm ahead, sideways sides 1.35 mm behind (was 1.3 / 3.6) |
+| figure-8, tangent | 1.9 / 6.4 mm | **2.5 / 4.0 mm** | 2.05 mm ahead (was ~0.9) |
+
+Tracking error is RMS / max. The sim stays stable with the lighter rollers (2.1 g instead of 5 g): no failed solves and no fallbacks.
+- **Fixed heading improved:** less sideways lag.
+- **Tangent heading got worse:** the robot runs ahead of the reference.
+
+Both fit a friction feedforward that is now too large for the lighter robot: rolling resistance scales with the load, and 0.003 × 2.134/3.0 ≈ 0.002 N·m. Next: re-measure the rolling resistance, or retune `friction_torque`, then re-run the result tables.

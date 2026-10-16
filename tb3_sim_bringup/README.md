@@ -1,6 +1,6 @@
 # tb3_sim_bringup
 
-Launch entrypoint for a TurtleBot3 Waffle Pi Gazebo (gz sim) simulation on ROS2 Jazzy, built to the point where the robot can be driven via `/cmd_vel`.
+Gazebo (gz sim) simulations on ROS 2 Jazzy for **the own mecanum robot** (the one the MPC in [`mecanum_mpc`](../mecanum_mpc/README.md) controls) and a TurtleBot3 Waffle Pi, diff-drive or mecanum variant. Each robot can be driven via `/cmd_vel`; the own robot can also be driven by wheel torques (`drive:=effort`).
 
 ## What's here
 
@@ -150,6 +150,8 @@ Your own robot from [Kemenylegeny/Mecanum-TDK `assets/robots/own_mecanum`](https
 
 ```bash
 ros2 launch tb3_sim_bringup own_mecanum_sim.launch.py   # same args: world:=… x_pose:= y_pose:= gui:=false
+#   drive:=effort  wheel torques on /model/own_mecanum/joint/<corner>_wheel_joint/cmd_force
+#                  instead of /cmd_vel, ground-truth /odom (used by mecanum_mpc)
 ros2 run tb3_sim_bringup tb3_mecanum_teleop_keys       # same teleop, same /cmd_vel
 ```
 
@@ -157,16 +159,33 @@ Same topics as the Waffle Pi (`/cmd_vel`, `/odom`, `/tf`, `/scan`, `/imu`, `/joi
 
 ### Files
 
-- `models/own_mecanum/robot.urdf` + `meshes/` — copied **unchanged** from the repo (only these are needed; `stl/` and the JSONs are generator inputs/analysis, their values are already baked into the URDF). To update the robot, copy a newer `robot.urdf` + `meshes/` over them.
+- `models/own_mecanum/robot.urdf` + `meshes/` — copied from the repo (only these are needed; `stl/` and the JSONs are generator inputs/analysis, their values are already baked into the URDF). **The one local change is the masses and inertias**: the weighed masses, applied by `docs/analysis/set_masses.py` (see [Masses](#masses-weighed-2026-10-16)). To update the robot, copy a newer `robot.urdf` + `meshes/` over them, then run `python3 docs/analysis/set_masses.py models/own_mecanum/robot.urdf --write`.
 - `urdf/own_mecanum.urdf.xacro` — includes `robot.urdf` and adds everything simulation-specific: `base_footprint`, lidar (`base_scan`) and IMU (`imu_link`) frames + sensors, roller friction (μ = 0.8, middle of the 0.5–1.1 rubber range in `robot_config.json`), `MecanumDrive` and `JointStatePublisher` (all 40 joints).
 - `launch/own_mecanum_sim.launch.py` — expands the xacro, rewrites the URDF's relative `meshes/…` paths to `package://tb3_sim_bringup/models/own_mecanum/meshes/…`, and spawns from `robot_description`. **One description for both Gazebo and `robot_state_publisher`** (no hand-synced SDF copy, unlike the Waffle Pi variant).
 
 ### How it differs from the Waffle Pi mecanum
 
 - **Rollers:** each wheel = hub (no collision) + 9 free-spinning roller links on revolute joints, each roller's collision = **6 spheres** along its axis (radii 5.04/6.10/6.64/6.64/6.10/5.04 mm) approximating the barrel shape; 216 contact spheres total. Rollers use plain isotropic friction — the mecanum effect comes from the rollers actually spinning, not from the `fdir1` trick. Roller pattern is the same "X" as the Waffle Pi variant.
-- **Geometry:** wheels at x = ±0.064, y = ±0.1526, z = −0.0415 in `base_link`; effective rolling radius 0.03028 (envelope of the sphere chains) → `wheelbase 0.128`, `wheel_separation 0.3052`, `wheel_radius 0.03028`. `base_footprint` is 0.0718 below `base_link`, under the wheel centre. Mass ≈ 3 kg (chassis 2.6 kg guessed in `robot_config.json`). Chassis–ground clearance is only ~5 mm.
+- **Geometry:** wheels at x = ±0.064, y = ±0.1526, z = −0.0415 in `base_link`; effective rolling radius 0.03028 (envelope of the sphere chains) → `wheelbase 0.128`, `wheel_separation 0.3052`, `wheel_radius 0.03028`. `base_footprint` is 0.0718 below `base_link`, under the wheel centre. Mass 2.134 kg (weighed, see [Masses](#masses-weighed-2026-10-16)). Chassis–ground clearance is only ~5 mm.
 - **Lidar:** the scanner is part of `chassis_visual.stl` (round head ~62 mm across on top, RPLIDAR-A1-like base). Found by analysing the mesh: head centred at x = 0.0015, y = 0, z = 0.048–0.0665 in `base_link` → scan plane `base_scan` at (0.0015, 0, 0.057), i.e. 0.129 m above ground. Same settings as the TB3 LDS (360 samples, 0.12–3.5 m, 10 Hz). The 0.12 m min range keeps rays off the robot's own housing.
 - **IMU:** placeholder at the `base_link` origin until the real mount is known.
+
+### Masses (weighed, 2026-10-16)
+
+The real robot was weighed: **1927.4 g** for the body without wheels and **51.65 g** for each wheel (hub + 9 rollers), **2.134 kg** in total. The Mecanum-TDK URDF had guesses: a 2.6 kg chassis, 100 g per wheel, 3.0 kg in total. Each component is assumed to be homogeneous, and `docs/analysis/set_masses.py` computes the `<inertial>` blocks from the geometry:
+
+| link | mass | how | before |
+|---|---|---|---|
+| `base_link` | 1927.4 g | uniform density over `chassis_visual.stl` (1514 cm³). The CoM is the mesh centroid, at (−1.1, 0.1, −19.7) mm in `base_link`. The inertia comes from the mesh. | 2.6 kg, CoM (+16.0, −0.2, +1.1) mm |
+| `<corner>_wheel` (hub) | 32.59 g | one density (700 kg/m³) over the hub cylinder (r 21 mm, 33.6 mm long) and the 9 rollers, so the mass is split by volume | 55 g |
+| `<corner>_roller_NN` | 2.118 g each | the same density, inertia from the barrel mesh `roller.stl` (it was a cylinder before) | 5 g |
+
+Notes:
+- The inertia per kg of the body hardly changes (within 1 %). The old values had the same uniform-density inertia, but with a CoM moved 16 mm forward by hand.
+- `chassis_visual.stl` has small gaps. Integrated about different reference points, the volume, centroid and inertia change by less than 0.5 %, 1 mm and 0.5 %.
+- `chassis_collision.stl` is a closed hull of 7.6 L, so it is not usable for this.
+
+Checked headless in Gazebo with the MPC: the robot is stable on the lighter rollers, and tracking stays at 2.5 mm RMS. See `mecanum_mpc`.
 
 ### Verified (2026-10-05, headless)
 
@@ -191,6 +210,6 @@ Pure physics, no sensors, real-time cap off, 10 s sim at 1 ms steps (DART is sin
 ## Notes
 
 - `~/ros2_ws/src/my_robot_description` is a **separate, unrelated** older experiment (a custom "box_bot" URDF + `voice_controller*.py` scripts on `/model/box_bot/cmd_vel`) — untouched by this work.
-- `~/ros2_ws` is not a git repo, so this file (rather than commit history) is the record of how/why this was set up.
-- MPC control for the mecanum variant: researched, not implemented — options, trade-offs and an evaluation plan are in [docs/mecanum_mpc_options.md](docs/mecanum_mpc_options.md).
+- `~/ros2_ws/src` has been a git repo since 2026-10-05; `my_robot_description` is excluded. This file still records how and why the sim was set up, and the commit history records later changes.
+- MPC control: implemented for the own robot as [`mecanum_mpc`](../mecanum_mpc/README.md), an LTV-MPC with wheel-torque inputs on `drive:=effort`. Research notes, results and benchmarks are in [docs/mecanum_mpc_options.md](docs/mecanum_mpc_options.md).
 - Natural next steps, not yet done: SLAM/mapping (`turtlebot3_cartographer`), autonomous navigation (`turtlebot3_navigation2` — for the mecanum variant, Nav2's controller needs holonomic settings, e.g. MPPI with `motion_model: Omni`), RViz visualization, a custom world.
