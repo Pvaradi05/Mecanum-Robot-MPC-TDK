@@ -13,7 +13,7 @@ URDF = os.path.join(os.path.dirname(__file__), '..', '..', 'tb3_sim_bringup', 'm
 
 def test_params_from_urdf():
     p = model.params_from_urdf(URDF)
-    assert abs(p.ms - 3.0) < 1e-6
+    assert abs(p.ms - (1.9274 + 4 * 0.05165)) < 1e-6   # weighed: body 1927.4 g, wheel 51.65 g
     assert abs(p.R - 0.03028) < 1e-5          # roller envelope, wheel_geometry.json
     assert abs(p.lx - 0.064) < 1e-9 and abs(p.ly - 0.1526) < 1e-9
 

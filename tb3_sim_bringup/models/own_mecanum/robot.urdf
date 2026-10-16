@@ -6,11 +6,11 @@
   <link name="base_link">
     <visual><origin xyz="0 0 -0.0648" rpy="0 0 3.14159"/><geometry><mesh filename="meshes/chassis_visual.stl"/></geometry><material name="chassis"/></visual>
     <collision><origin xyz="0 0 -0.0648" rpy="0 0 3.14159"/><geometry><mesh filename="meshes/chassis_collision.stl"/></geometry></collision>
-    <inertial><origin xyz="0.016016 -0.000239 0.001111"/><mass value="2.6"/><inertia ixx="0.018614" iyy="0.015749" izz="0.028361" ixy="-3.052e-05" ixz="4.069e-05" iyz="-1.695e-05"/></inertial>
+    <inertial><origin xyz="-0.00105471 0.000134861 -0.0197203"/><mass value="1.9274"/><inertia ixx="0.0136903" iyy="0.0116612" izz="0.0208565" ixy="-4.36657e-05" ixz="4.07701e-05" iyz="9.69568e-07"/></inertial>
   </link>
   <link name="front_left_wheel">
     <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.021" length="0.0336"/></geometry><material name="hub"/></visual>
-    <inertial><mass value="0.055"/><inertia ixx="1.12382e-05" iyy="1.21275e-05" izz="1.12382e-05" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.0325873"/><inertia ixx="6.65856e-06" iyy="7.1855e-06" izz="6.65856e-06" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_wheel_joint" type="continuous">
     <parent link="base_link"/><child link="front_left_wheel"/>
@@ -24,7 +24,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_00_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_00"/>
@@ -39,7 +39,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_01_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_01"/>
@@ -54,7 +54,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_02_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_02"/>
@@ -69,7 +69,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_03_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_03"/>
@@ -84,7 +84,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_04_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_04"/>
@@ -99,7 +99,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_05_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_05"/>
@@ -114,7 +114,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_06_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_06"/>
@@ -129,7 +129,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_07_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_07"/>
@@ -144,7 +144,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_left_roller_08_joint" type="continuous">
     <parent link="front_left_wheel"/><child link="front_left_roller_08"/>
@@ -153,7 +153,7 @@
   </joint>
   <link name="front_right_wheel">
     <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.021" length="0.0336"/></geometry><material name="hub"/></visual>
-    <inertial><mass value="0.055"/><inertia ixx="1.12382e-05" iyy="1.21275e-05" izz="1.12382e-05" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.0325873"/><inertia ixx="6.65856e-06" iyy="7.1855e-06" izz="6.65856e-06" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_wheel_joint" type="continuous">
     <parent link="base_link"/><child link="front_right_wheel"/>
@@ -167,7 +167,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_00_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_00"/>
@@ -182,7 +182,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_01_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_01"/>
@@ -197,7 +197,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_02_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_02"/>
@@ -212,7 +212,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_03_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_03"/>
@@ -227,7 +227,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_04_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_04"/>
@@ -242,7 +242,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_05_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_05"/>
@@ -257,7 +257,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_06_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_06"/>
@@ -272,7 +272,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_07_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_07"/>
@@ -287,7 +287,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="front_right_roller_08_joint" type="continuous">
     <parent link="front_right_wheel"/><child link="front_right_roller_08"/>
@@ -296,7 +296,7 @@
   </joint>
   <link name="rear_left_wheel">
     <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.021" length="0.0336"/></geometry><material name="hub"/></visual>
-    <inertial><mass value="0.055"/><inertia ixx="1.12382e-05" iyy="1.21275e-05" izz="1.12382e-05" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.0325873"/><inertia ixx="6.65856e-06" iyy="7.1855e-06" izz="6.65856e-06" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_wheel_joint" type="continuous">
     <parent link="base_link"/><child link="rear_left_wheel"/>
@@ -310,7 +310,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_00_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_00"/>
@@ -325,7 +325,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_01_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_01"/>
@@ -340,7 +340,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_02_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_02"/>
@@ -355,7 +355,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_03_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_03"/>
@@ -370,7 +370,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_04_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_04"/>
@@ -385,7 +385,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_05_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_05"/>
@@ -400,7 +400,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_06_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_06"/>
@@ -415,7 +415,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_07_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_07"/>
@@ -430,7 +430,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_left_roller_08_joint" type="continuous">
     <parent link="rear_left_wheel"/><child link="rear_left_roller_08"/>
@@ -439,7 +439,7 @@
   </joint>
   <link name="rear_right_wheel">
     <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.021" length="0.0336"/></geometry><material name="hub"/></visual>
-    <inertial><mass value="0.055"/><inertia ixx="1.12382e-05" iyy="1.21275e-05" izz="1.12382e-05" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.0325873"/><inertia ixx="6.65856e-06" iyy="7.1855e-06" izz="6.65856e-06" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_wheel_joint" type="continuous">
     <parent link="base_link"/><child link="rear_right_wheel"/>
@@ -453,7 +453,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_00_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_00"/>
@@ -468,7 +468,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_01_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_01"/>
@@ -483,7 +483,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_02_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_02"/>
@@ -498,7 +498,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_03_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_03"/>
@@ -513,7 +513,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_04_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_04"/>
@@ -528,7 +528,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_05_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_05"/>
@@ -543,7 +543,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_06_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_06"/>
@@ -558,7 +558,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_07_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_07"/>
@@ -573,7 +573,7 @@
     <collision><origin xyz="0.00255 0 0"/><geometry><sphere radius="0.00664113"/></geometry></collision>
     <collision><origin xyz="0.00765 0 0"/><geometry><sphere radius="0.00609723"/></geometry></collision>
     <collision><origin xyz="0.01275 0 0"/><geometry><sphere radius="0.00504459"/></geometry></collision>
-    <inertial><mass value="0.005"/><inertia ixx="1.1256e-07" iyy="3.27218e-07" izz="3.27218e-07" ixy="0" ixz="0" iyz="0"/></inertial>
+    <inertial><mass value="0.00211808"/><inertia ixx="4.09889e-08" iyy="1.19133e-07" izz="1.19133e-07" ixy="0" ixz="0" iyz="0"/></inertial>
   </link>
   <joint name="rear_right_roller_08_joint" type="continuous">
     <parent link="rear_right_wheel"/><child link="rear_right_roller_08"/>

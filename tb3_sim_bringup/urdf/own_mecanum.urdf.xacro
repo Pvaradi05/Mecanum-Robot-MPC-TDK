@@ -2,8 +2,10 @@
 <!--
   Own mecanum robot (github.com/Kemenylegeny/Mecanum-TDK, assets/robots/own_mecanum) for gz sim.
 
-  models/own_mecanum/robot.urdf + meshes/ are copied from that repo UNCHANGED, so a newer
-  version can be dropped in over them. Everything the simulation needs on top of it lives here:
+  models/own_mecanum/robot.urdf + meshes/ are copied from that repo. The only local change is
+  the <inertial> blocks: weighed masses (body 1927.4 g, wheel 51.65 g), homogeneous components,
+  written by docs/analysis/set_masses.py. To update the robot, drop a newer robot.urdf in and
+  re-run that script with its write option. Everything the simulation needs on top of it lives here:
   base_footprint, lidar + IMU frames and sensors, roller friction, the MecanumDrive and
   JointStatePublisher systems. The launch file rewrites the URDF's relative mesh paths
   ("meshes/...") to package:// URIs.
