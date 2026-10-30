@@ -13,8 +13,12 @@ Publishes   /model/<model>/joint/<corner>_wheel_joint/cmd_force   (std_msgs/Floa
                                                                     field names in layout label)
 Log         <log_dir>/<shape>_<heading>_<speed>_<time>.csv, one row per control step
 
-Limits u_max, omega_max and du_max default to the DYNAMIXEL XM430-W210-T data at 12.0 V, see
-motor.py (source: ROBOTIS e-manual).
+Limits u_max and omega_max default to the DYNAMIXEL XM430-W210-T data at 12.0 V, see motor.py
+(source: ROBOTIS e-manual); the weights Q to the controller's Q_DEFAULT, R to 400 I (weights.py).
+A controller whose state is 'wheel' (ctrl.state) gets z = [X, Y, psi, w1, w2, w3]: the measured
+base velocity and the reference velocities through the rolling constraints
+(wheel_dynamics.from_world, the LTV-MPC's default "kinematic" measurement); the log keeps the
+world-frame state.
 """
 import csv
 import math
@@ -33,10 +37,11 @@ from rclpy.signals import SignalHandlerOptions
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64, Float64MultiArray, MultiArrayDimension
 
-from . import motor, wheel_speed
+from . import motor, wheel_dynamics
 from . import params as robot_params
 from .conventions import STATUS_STOPPED
 from .reference import SHAPES, Reference
+from .weights import Q_BO, R_BO
 
 STATUS_FIELDS = ['t', 'err_pos', 'err_psi', 'qp_ms', 'step_ms', 'status',
                  'M1', 'M2', 'M3', 'M4', 'w1', 'w2', 'w3', 'w4']
@@ -53,10 +58,11 @@ def wrap(a):
 class MPCNode(Node):
     NAME = ''          # node name, topic prefix and log folder, e.g. 'lmpc_v2'
     EXTRA = ()         # info keys logged after the common CSV columns and status fields
+    ODOM_GUARD = True  # reject implausible odometry twists (gz yaw-rate glitch at +-180 deg)
+    Q_DEFAULT = Q_BO   # default of the 'Q' parameter (the LTV-MPC's weights)
 
     def make_controller(self, p, c):
-        """Return the controller; c holds the common settings (T, N, Q, R, P_scale, limits,
-        wheel-speed limit and slack weights)."""
+        """Return the controller; c holds the common settings (T, N, Q, R, u_max, omega_max)."""
         raise NotImplementedError
 
     def extra_values(self, info):
@@ -81,15 +87,10 @@ class MPCNode(Node):
         c = dict(
             T=P('T', 0.05).value,
             N=P('N', 10).value,                 # D4: 10 steps = 0.5 s (was 20 until 2026-10-21)
-            Q=list(P('Q', [40000.0, 40000.0, 3283.0, 2500.0, 2500.0, 100.0]).value),
-            R=list(P('R', [400.0, 400.0, 400.0, 400.0]).value),
-            P_scale=P('P_scale', 5.0).value,
+            Q=list(P('Q', list(self.Q_DEFAULT)).value),
+            R=list(P('R', list(R_BO)).value),
             u_max=P('u_max', motor.U_MAX).value,                 # N m, XM430-W210-T graph maximum
             omega_max=P('omega_max', motor.OMEGA_MAX).value,     # rad/s, no-load speed at 12 V
-            du_max=P('du_max', motor.DU_MAX).value,              # N m per step, = u_max
-            wheel_speed_limit=P('wheel_speed_limit', True).value,   # soft limit (NMPC plan N5)
-            slack_lin=P('slack_lin', wheel_speed.SLACK_LIN).value,     # per rad/s over omega_max
-            slack_quad=P('slack_quad', wheel_speed.SLACK_QUAD).value,  # per (rad/s)^2 over it
         )
         urdf = P('urdf', default_urdf).value
         self.model = P('model_name', 'own_mecanum').value
@@ -106,7 +107,8 @@ class MPCNode(Node):
         self.T, self.N = c['T'], c['N']
         self.ref = Reference(self.p, shape, size or None, speed, heading, loop,
                              corner_radius=None if corner_radius < 0 else corner_radius)
-        maxima, violations = self.ref.check_limits(self.T, c['u_max'], c['du_max'], self.omega_max)
+        # no torque-rate limit in the controllers (removed 2026-10-30): the step change is only shown
+        maxima, violations = self.ref.check_limits(self.T, c['u_max'], math.inf, self.omega_max)
         self.get_logger().info(
             f'{shape}, {heading} heading, {speed} m/s, ' + ('loop' if loop else
                                                           f'{self.ref.T_end:.1f} s') +
@@ -148,7 +150,8 @@ class MPCNode(Node):
         pp, tw = msg.pose.pose, msg.twist.twist
         psi = _yaw(pp.orientation)
         nu = np.array([tw.linear.x, tw.linear.y, tw.angular.z])      # body twist
-        if self.x_meas is not None and np.abs(self.p.W @ nu).max() > 2 * self.omega_max:
+        if (self.ODOM_GUARD and self.x_meas is not None
+                and np.abs(self.p.W @ nu).max() > 2 * self.omega_max):
             # implausible twist (gz yaw-rate glitch at +-180 deg): keep the previous velocities
             self.get_logger().warn(f'odometry twist rejected: {nu.round(3).tolist()}')
             vel = self.x_meas[3:]
@@ -179,7 +182,10 @@ class MPCNode(Node):
         t = now - self.t0
         x_r, u_r = self.ref.horizon(t, self.T, self.N)
         x = self.x_meas.copy()
-        u, info = self.mpc.step(x, x_r, u_r, self.u_applied)
+        z, z_r = x, x_r
+        if self.mpc.state == 'wheel':
+            z, z_r = wheel_dynamics.from_world(x, self.p), wheel_dynamics.from_world(x_r, self.p)
+        u, info = self.mpc.step(z, z_r, u_r, self.u_applied)
         self._publish_torques(u)
         self.u_applied = u
 

@@ -5,13 +5,16 @@ The shared base of the own mecanum robot's controllers: the linear MPC v2 (`meca
 | Module | Contents |
 | --- | --- |
 | `params.py` | Robot parameters from `robot.urdf`: m_s, J_C, J1, R, ρ, l and the wheel signs; m_e, J_e, κ, W, G, G⁺ |
-| `dynamics.py` | Chaplygin model f(x, u), RK4 step F and its chain-rule Jacobians (NumPy) |
-| `dynamics_casadi.py` | The same model and RK4 step in CasADi symbols, for acados; tested against `dynamics.py` |
+| `dynamics.py` | Chaplygin model f(x, u) in the world-frame state [X, Y, ψ, Ẋ, Ẏ, ψ̇], RK4 step F and its chain-rule Jacobians (NumPy) |
+| `wheel_dynamics.py` | The same model in the wheel-speed state z = [X, Y, ψ, ω₁, ω₂, ω₃], the state of both controllers since 2026-10-30; conversions from the world state and the encoders; the velocity weights on the wheel speeds. Copied unchanged from Kemenylegeny/Mecanum-tracking-tdk @ 411436a |
+| `wheel_dynamics_casadi.py` | The wheel-speed-state model and RK4 step in CasADi symbols, for acados; tested against `wheel_dynamics.py` |
+| `dare.py` | The DARE terminal weight of both controllers (the comparison repository's `solve_dare`, unchanged) |
+| `weights.py` | The weights: Q_BO (the LTV-MPC's, the LMPC's default), Q_BRYSON (the NMPC's default for now), R = 400·I₄ |
 | `reference.py` | Paths, cosine speed ramps, fixed or raw tangent heading, inverse dynamics, step-averaged reference torques, anchoring, feasibility check |
 | `motor.py` | Wheel motor limits: DYNAMIXEL XM430-W210-T at 12.0 V |
-| `wheel_speed.py` | Wheel speeds from the state, their Jacobian, and the slack weights of the soft wheel-speed limit |
+| `wheel_speed.py` | Wheel speeds from the world-frame state, their Jacobian, and the slack weights of the LMPC's optional soft wheel-speed limit |
 | `conventions.py` | Step status codes and controller display names |
-| `mpc_node.py` | The ROS node every controller uses: measurement, reference, timer, topics, CSV log; a controller subclasses it |
+| `mpc_node.py` | The ROS node every controller uses: measurement (converted to the wheel-speed state for a controller with `state == 'wheel'`), reference, timer, topics, CSV log; a controller subclasses it |
 | `offline_sim.py` | Closed loop against the model (nominal or perturbed plant) for any controller |
 | `evaluate.py`, `plot_runs.py`, `record_video.py` | Metrics, charts and overhead videos of runs |
 

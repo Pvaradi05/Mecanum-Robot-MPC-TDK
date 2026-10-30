@@ -20,7 +20,7 @@
   <exec_depend>python3-matplotlib</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
   <exec_depend>python3-pil</exec_depend>
-  <!-- casadi (dynamics_casadi.py) comes with the acados Python interface, see the README -->
+  <!-- casadi (wheel_dynamics_casadi.py) comes with the acados Python interface, see the README -->
 
   <test_depend>python3-pytest</test_depend>
 

@@ -3,7 +3,9 @@ plan tests 8-9). A controller package passes make_controller(p, T, N) and gets t
 reference and metrics as every other controller.
 
 Plant: the same Chaplygin model, RK4 with 10 substeps per control period. The perturbed plant
-(only for this test) has its own parameters and a Coulomb friction torque on each wheel.
+(only for this test) has its own parameters and a Coulomb friction torque on each wheel. A
+controller whose state is 'wheel' gets the plant's state and the reference through the rolling
+constraints of its own model (wheel_dynamics.from_world), as in mpc_node.
 """
 import argparse
 import dataclasses
@@ -11,7 +13,7 @@ import os
 
 import numpy as np
 
-from . import dynamics, params
+from . import dynamics, params, wheel_dynamics
 from .conventions import FAILED, STATUS_NOT_CONVERGED
 from .reference import SHAPES, Reference
 from .wheel_speed import wheel_speeds
@@ -66,7 +68,10 @@ def run(make_controller, shape='circle', heading='fixed', speed=0.1, plant='nomi
     for k in range(int(round((ref.T_end + 2.0) / T))):
         t = k * T
         x_r, u_r = ref.horizon(t, T, N)
-        u, info = mpc.step(x, x_r, u_r, u_applied)
+        z, z_r = x, x_r
+        if mpc.state == 'wheel':
+            z, z_r = wheel_dynamics.from_world(x, p), wheel_dynamics.from_world(x_r, p)
+        u, info = mpc.step(z, z_r, u_r, u_applied)
         rows.append(np.r_[t, x, x_r[0], u, info['qp_ms'], info['step_ms'], info['status']])
         for key in extra:
             extras[key].append(info[key])

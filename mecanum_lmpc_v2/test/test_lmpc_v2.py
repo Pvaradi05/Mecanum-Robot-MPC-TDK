@@ -1,4 +1,6 @@
-"""Plan tests 1-7 (section "Verification and tests"). Run: python3 -m pytest test/ -q"""
+"""Plan tests 1-7 (section "Verification and tests"), on the latest LTV-MPC (LATEST), and the
+tests of its additions from Kemenylegeny/Mecanum-tracking-tdk @ 411436a, tests/test_mpc.py.
+Run: python3 -m pytest test/ -q"""
 import os
 
 import numpy as np
@@ -6,8 +8,10 @@ import pytest
 import quadprog
 from scipy.integrate import solve_ivp
 
-from mecanum_mpc_common import dynamics, params
-from mecanum_lmpc_v2.lmpc import STATUS_SOLVED, LinearMPCv2
+from mecanum_mpc_common import dynamics, params, wheel_dynamics
+from mecanum_mpc_common.dare import solve_dare
+from mecanum_lmpc_v2 import LATEST
+from mecanum_lmpc_v2.lmpc import LinearMPCv2
 from mecanum_lmpc_v2.offline_sim import run
 from mecanum_mpc_common.reference import SHAPES, Reference
 
@@ -140,24 +144,26 @@ def test_reference_consistency(shape, heading, t_start):
 
 # ---- test 5 and 6: prediction and QP -------------------------------------------------------------
 def _one_step(offset=(0.01, -0.005, 0.02, 0, 0, 0), t=3.0):
+    """One step of the latest LTV-MPC; offset on the world-frame state. Returns wheel-speed states."""
     p = robot()
     ref = Reference(p, 'figure8', None, 0.1, 'tangent')
     ref.anchor((0.0, 0.0, 0.0))
-    mpc = LinearMPCv2(p)
+    mpc = LinearMPCv2(p, **LATEST)
     x_r, u_r = ref.horizon(t, mpc.T, mpc.N)
-    u, info = mpc.step(x_r[0] + np.array(offset), x_r, u_r, u_r[0])
-    return p, mpc, x_r, u_r, info
+    z_r = wheel_dynamics.from_world(x_r, p)
+    u, info = mpc.step(wheel_dynamics.from_world(x_r[0] + np.array(offset), p), z_r, u_r, u_r[0])
+    return p, mpc, z_r, u_r, info
 
 
 def test_condensed_prediction_equals_stepping():
-    p, mpc, x_r, u_r, info = _one_step()
+    p, mpc, z_r, u_r, info = _one_step()
     rng = np.random.default_rng(2)
     ub = 0.01 * rng.normal(size=4 * mpc.N)
     pred = info['e'] + info['Bbar'] @ ub
     xt = info['x_tilde0']
     for j in range(mpc.N):
-        Ad, Bd = dynamics.rk4_jacobians(x_r[j], u_r[j], mpc.T, p)
-        c = dynamics.rk4_step(x_r[j], u_r[j], mpc.T, p) - x_r[j + 1]
+        Ad, Bd = wheel_dynamics.rk4_jacobians(z_r[j], u_r[j], mpc.T, p)
+        c = wheel_dynamics.rk4_step(z_r[j], u_r[j], mpc.T, p) - z_r[j + 1]
         xt = Ad @ xt + Bd @ ub[4 * j:4 * j + 4] + c
         assert np.allclose(pred[6 * j:6 * j + 6], xt, atol=1e-12)
     H = info['H']
@@ -172,7 +178,8 @@ def test_qp_unconstrained_and_kkt():
     x, _, _, _, lam, _ = quadprog.solve_qp(H, -f, mpc.C, b, 0)
     slack = mpc.C.T @ x - b
     assert slack.min() > -1e-9 and (slack < 1e-9).any()                  # feasible, some active
-    assert lam.min() >= -1e-12 and np.abs(lam * slack).max() < 1e-9      # complementarity
+    # complementarity, relative to the multipliers (~1e6 with Q_BO): active slacks are 0 to rounding
+    assert lam.min() >= -1e-12 and np.abs(lam * slack).max() < 1e-12 * lam.max()
     scale = np.abs(H).max() * np.abs(x).max() + np.abs(f).max()
     assert np.abs(H @ x + f - mpc.C @ lam).max() < 1e-12 * scale         # stationarity
 
@@ -189,3 +196,90 @@ def test_closed_loop_nominal(shape, heading):
 def test_closed_loop_perturbed_stays_bounded(shape):
     r = run(shape, 'tangent', plant='perturbed', urdf=URDF)
     assert r['not_solved'] == 0 and r['max_mm'] < 20.0
+
+
+# ---- additions of the comparison repository (tests/test_mpc.py there) ----------------------------
+Q_BRYSON = np.diag([40000, 40000, 3283, 2500, 2500, 100.0])
+R_400 = np.diag([400.0] * 4)
+
+
+def test_dare_solves_riccati():
+    p = robot()
+    ref = Reference(p, 'circle', None, 0.1, 'tangent')
+    ref.anchor((0.0, 0.0, 0.0))
+    x_r, u_r = ref.horizon(10.0, 0.05, 10)
+    A, B = dynamics.rk4_jacobians(x_r[9], u_r[9], 0.05, p)
+    Pd, it = solve_dare(A, B, Q_BRYSON, R_400)
+    K = np.linalg.solve(R_400 + B.T @ Pd @ B, B.T @ Pd @ A)
+    assert it < 200
+    assert np.abs(Q_BRYSON + A.T @ Pd @ (A - B @ K) - Pd).max() < 1e-6 * np.abs(Pd).max()
+    assert np.all(np.linalg.eigvalsh(Pd) > 0) and np.abs(np.linalg.eigvals(A - B @ K)).max() < 1.0
+    # warm start: the same problem converges at once
+    assert solve_dare(A, B, Q_BRYSON, R_400, Pd)[1] <= 2
+
+
+def test_latest_terminal_weight_is_the_dare_solution():
+    # the latest configuration's terminal block: the DARE in the wheel-speed state with Q_BO
+    p, mpc, z_r, u_r, info = _one_step()
+    A, B = wheel_dynamics.rk4_jacobians(z_r[mpc.N - 1], u_r[mpc.N - 1], mpc.T, p)
+    K = np.linalg.solve(mpc.R + B.T @ mpc.P_dare @ B, B.T @ mpc.P_dare @ A)
+    res = mpc.Q + A.T @ mpc.P_dare @ (A - B @ K) - mpc.P_dare
+    assert mpc.dare_iterations < mpc.dare_iters
+    assert np.abs(res).max() < 1e-6 * np.abs(mpc.P_dare).max()
+    assert np.abs(np.linalg.eigvals(A - B @ K)).max() < 1.0
+
+
+def test_torque_change_penalty():
+    p = robot()
+    ref = Reference(p, 'square', None, 0.1, 'tangent')
+    ref.anchor((0.0, 0.0, 0.0))
+    x_r, u_r = ref.horizon(5.0, 0.05, 10)
+    x = x_r[0] + np.array([0.02, -0.01, 0.1, 0.0, 0.0, 0.0])
+    u_applied = np.zeros(4)
+    jumps = []
+    for S in (None, [1e4] * 4):
+        u, _ = LinearMPCv2(p, terminal='dare', S=S).step(x, x_r, u_r, u_applied)
+        jumps.append(np.linalg.norm(u - u_applied))
+    assert jumps[1] < 0.5 * jumps[0]
+
+
+def test_path_frame_weight():
+    p = robot()
+    ref = Reference(p, 'circle', None, 0.1, 'fixed')
+    ref.anchor((0.0, 0.0, 0.0))
+    x_r, u_r = ref.horizon(12.0, 0.05, 10)
+    x = x_r[0] + np.array([0.01, -0.02, 0.05, 0.0, 0.0, 0.0])
+    for terminal in ('scaled', 'dare'):
+        # qa = qc = 40000 is the plain Q
+        u0, _ = LinearMPCv2(p, terminal=terminal, S=[100.0] * 4).step(x, x_r, u_r, u_r[0])
+        u1, _ = LinearMPCv2(p, terminal=terminal, S=[100.0] * 4,
+                            Q_path=(4e4, 4e4)).step(x, x_r, u_r, u_r[0])
+        assert np.allclose(u0, u1, atol=1e-9)
+    # the weight is along the direction of travel (not the fixed heading): t^T M t = qa, n^T M n = qc
+    M = LinearMPCv2(p, Q_path=(9.0, 1.0)).path_weight(np.array([0.0, 0.2]))
+    assert np.allclose(M, np.diag([1.0, 9.0]))
+    # a larger along-track weight shrinks the predicted along-track error
+    _, info = LinearMPCv2(p, terminal='dare', S=[100.0] * 4,
+                          Q_path=(4e6, 4e4)).step(x, x_r, u_r, u_r[0])
+    _, info0 = LinearMPCv2(p, terminal='dare', S=[100.0] * 4).step(x, x_r, u_r, u_r[0])
+
+    def along(info):
+        e = info['predicted'][-1, :2] - x_r[-1, :2]
+        t = x_r[-1, 3:5] / np.linalg.norm(x_r[-1, 3:5])
+        return abs(t @ e)
+    assert along(info) < along(info0)
+
+
+def test_wheel_state_controller():
+    # the same tracking problem in both states: nearly the same torques (the velocity error is
+    # measured in other coordinates and the model linearised in them)
+    p = robot()
+    ref = Reference(p, 'square', None, 0.1, 'tangent')
+    ref.anchor((0.0, 0.0, 0.0))
+    x_r, u_r = ref.horizon(5.0, 0.05, 10)
+    x = x_r[0] + np.array([0.02, -0.01, 0.1, 0.01, 0.0, 0.05])
+    for limit in (False, True):
+        u0, _ = LinearMPCv2(p, terminal='dare', wheel_speed_limit=limit).step(x, x_r, u_r, u_r[0])
+        u1, info = LinearMPCv2(p, terminal='dare', wheel_speed_limit=limit, state='wheel').step(
+            wheel_dynamics.from_world(x, p), wheel_dynamics.from_world(x_r, p), u_r, u_r[0])
+        assert info['status'] == 0 and np.abs(u1 - u0).max() < 0.1 * np.abs(u0).max()
